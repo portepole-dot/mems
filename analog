@@ -3,694 +3,768 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stochastic Smart Dust Reservoir Computing</title>
+    <title>Analog Stochastic Swarm & Memristor Crossbar</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
         :root {
-            --bg-color: #050508;
-            --toxic-green: #39ff14;
-            --crimson-red: #dc143c;
-            --electric-cyan: #00ffff;
-            --deep-magenta: #ff00ff;
-            --panel-border: rgba(57, 255, 20, 0.3);
-            --font-main: 'Courier New', Courier, monospace;
+            --bg-color: #030a05;
+            --neon-green: #39ff14;
+            --amber: #ffbf00;
+            --cyan: #00ffff;
+            --magenta: #ff00ff;
+            --tactical-dark: rgba(5, 20, 10, 0.85);
+            --border-glow: 0 0 10px rgba(57, 255, 20, 0.3);
+            --red-alert: #ff003c;
         }
 
-        * {
-            box-sizing: border-box;
+        body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--neon-green);
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
             user-select: none;
         }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--toxic-green);
-            font-family: var(--font-main);
-            overflow: hidden;
-            display: flex;
-            height: 100vh;
-            width: 100vw;
+        /* p5.js Canvas Container */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
         }
 
-        /* Scanline CRT overlay */
+        /* CRT Scanline Overlay */
         .scanlines {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 4px, 6px 100%;
-            pointer-events: none;
-            z-index: 9999;
-        }
-
-        #left-col {
-            flex: 7;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            border-right: 2px solid var(--panel-border);
-        }
-
-        #p5-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
-        }
-
-        /* Overlay text for panels */
-        .panel-label {
-            position: absolute;
-            left: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 2px;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
             z-index: 10;
-            text-shadow: 0 0 5px var(--toxic-green);
             pointer-events: none;
-            background: rgba(5, 5, 8, 0.7);
-            padding: 5px 10px;
-            border: 1px solid var(--panel-border);
         }
 
-        #label-p1 { top: 20px; color: var(--toxic-green); }
-        #label-p2 { top: calc(50% + 20px); color: var(--electric-cyan); border-color: rgba(0, 255, 255, 0.3); text-shadow: 0 0 5px var(--electric-cyan);}
-
-        #right-col {
-            flex: 3;
-            display: flex;
-            flex-direction: column;
+        /* UI Overlay Layout */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            display: grid;
+            grid-template-columns: 40% 60%;
+            grid-template-rows: 60px 1fr 250px;
             padding: 20px;
-            background: rgba(0, 15, 0, 0.6);
-            z-index: 10;
-            box-shadow: -10px 0 20px rgba(0,0,0,0.8);
-            border-left: 1px solid rgba(57, 255, 20, 0.5);
-            max-width: 450px;
+            box-sizing: border-box;
+            gap: 20px;
         }
 
-        .hud-header {
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 2px solid var(--toxic-green);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 8px var(--toxic-green);
-            letter-spacing: 1px;
-        }
-
-        .control-group {
-            margin-bottom: 25px;
-            background: rgba(0, 25, 0, 0.4);
-            border: 1px solid var(--panel-border);
-            padding: 15px;
-            border-radius: 4px;
-        }
-
-        .control-title {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #aaa;
-            text-transform: uppercase;
-        }
-
-        /* Custom Slider */
-        .slider-container {
+        /* Common Panel Styles */
+        .panel {
+            background: var(--tactical-dark);
+            border: 1px solid var(--neon-green);
+            box-shadow: var(--border-glow);
+            pointer-events: auto;
             display: flex;
             flex-direction: column;
+            position: relative;
+            backdrop-filter: blur(3px);
+        }
+
+        .panel-title {
+            background: var(--neon-green);
+            color: #000;
+            padding: 4px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-block;
+            align-self: flex-start;
+        }
+
+        /* Header */
+        header {
+            grid-column: 1 / 3;
+            grid-row: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--neon-green);
+            padding-bottom: 10px;
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 2px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
-        
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
+
+        .blink-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--neon-green);
+            border-radius: 50%;
+            animation: blink 1.5s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { opacity: 0.3; box-shadow: 0 0 2px var(--neon-green); }
+            to { opacity: 1; box-shadow: 0 0 12px var(--neon-green); }
+        }
+
+        /* Specific Panels */
+        #panel-1 {
+            grid-column: 1;
+            grid-row: 2 / 4;
             background: transparent;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 20px;
-            width: 15px;
-            background: var(--toxic-green);
-            cursor: pointer;
-            box-shadow: 0 0 10px var(--toxic-green);
-            margin-top: -8px;
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: var(--panel-border);
+            border-right: 1px dashed rgba(57, 255, 20, 0.4);
+            border-left: none;
+            border-top: none;
+            border-bottom: none;
+            box-shadow: none;
+            pointer-events: none;
         }
 
-        .triz-text {
-            font-size: 12px;
-            color: var(--electric-cyan);
-            text-align: center;
-            font-weight: bold;
-            text-shadow: 0 0 5px var(--electric-cyan);
-            margin-top: 5px;
-            animation: pulseText 2s infinite alternate;
+        #panel-2 {
+            grid-column: 2;
+            grid-row: 2;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 20px;
         }
 
-        @keyframes pulseText {
-            from { opacity: 0.7; }
-            to { opacity: 1; text-shadow: 0 0 10px var(--electric-cyan); }
-        }
-
-        /* Buttons */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid;
-            color: inherit;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
+        .power-readout {
             position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s ease;
+            bottom: 10px;
+            right: 10px;
+            text-align: right;
+            font-size: 14px;
+        }
+        
+        .power-readout .highlight {
+            color: var(--cyan);
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 8px var(--cyan);
         }
 
-        .btn:hover::before { left: 100%; }
+        /* Controls Panel (Panel 3) */
+        #panel-3 {
+            grid-column: 2;
+            grid-row: 3;
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            padding: 15px;
+        }
 
-        .btn-emp { color: #fff; border-color: #fff; }
-        .btn-emp:hover { background: #fff; color: #000; box-shadow: 0 0 15px #fff; }
+        .controls-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
 
-        .btn-kinetic { color: var(--crimson-red); border-color: var(--crimson-red); }
-        .btn-kinetic:hover { background: var(--crimson-red); color: #fff; box-shadow: 0 0 15px var(--crimson-red); }
+        .controls-right {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+        }
 
-        .btn-deploy { color: var(--toxic-green); border-color: var(--toxic-green); }
-        .btn-deploy:hover { background: var(--toxic-green); color: #000; box-shadow: 0 0 15px var(--toxic-green); }
-
-        /* Tactical Terminal Logs */
-        #terminal {
-            flex-grow: 1;
-            background: rgba(0, 5, 0, 0.8);
-            border: 1px solid var(--panel-border);
-            padding: 10px;
-            font-size: 12px;
-            overflow-y: auto;
+        /* Inputs & Buttons */
+        .slider-container {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
 
-        .log-entry { margin-bottom: 4px; word-wrap: break-word; line-height: 1.4; }
-        .log-time { color: #888; margin-right: 8px; }
-        .log-info { color: var(--toxic-green); }
-        .log-warn { color: #ffbf00; }
-        .log-crit { color: var(--crimson-red); font-weight: bold; text-shadow: 0 0 3px var(--crimson-red); }
-        .log-cyan { color: var(--electric-cyan); text-shadow: 0 0 3px var(--electric-cyan); }
-        
-        /* Custom Scrollbar for terminal */
-        #terminal::-webkit-scrollbar { width: 5px; }
-        #terminal::-webkit-scrollbar-track { background: #000; }
-        #terminal::-webkit-scrollbar-thumb { background: var(--toxic-green); }
+        .slider-container label {
+            font-size: 12px;
+            color: var(--amber);
+        }
 
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 10px;
+            background: var(--amber);
+            cursor: pointer;
+            box-shadow: 0 0 5px var(--amber);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 191, 0, 0.3);
+            border-radius: 2px;
+        }
+
+        .btn {
+            background: rgba(0, 20, 0, 0.5);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: var(--neon-green);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-green);
+        }
+
+        .btn.btn-danger {
+            border-color: var(--red-alert);
+            color: var(--red-alert);
+        }
+
+        .btn.btn-danger:hover {
+            background: var(--red-alert);
+            color: #000;
+            box-shadow: 0 0 15px var(--red-alert);
+        }
+
+        /* Terminal Display */
+        #terminal {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .log-entry { margin: 0; }
+        .log-info { color: var(--neon-green); }
+        .log-warn { color: var(--amber); }
+        .log-crit { color: var(--red-alert); font-weight: bold; }
+        .log-sys { color: var(--cyan); }
+
+        /* Custom Scrollbar for Terminal */
+        #terminal::-webkit-scrollbar { width: 5px; }
+        #terminal::-webkit-scrollbar-track { background: transparent; }
+        #terminal::-webkit-scrollbar-thumb { background: var(--neon-green); }
     </style>
 </head>
 <body>
+
+    <div id="canvas-container"></div>
     <div class="scanlines"></div>
 
-    <div id="left-col">
-        <div id="label-p1">PANEL 1: CHAOS RESERVOIR (PHYSICAL SWARM)</div>
-        <div id="label-p2">PANEL 2: CLOUD AI READOUT (SIGNAL RECONSTRUCTION)</div>
-        <div id="p5-container"></div>
-    </div>
+    <div id="ui-layer">
+        <header>
+            <h1>V2.0 HARDWARE PIVOT: ANALOG COMPUTATION MATRIX</h1>
+            <div class="status-indicator">
+                <span id="system-status">SYSTEM NOMINAL</span>
+                <div class="blink-dot"></div>
+            </div>
+        </header>
 
-    <div id="right-col">
-        <div class="hud-header">ASYMMETRIC WARFARE CMD</div>
-        
-        <div class="control-group">
-            <div class="control-title">TRIZ Inversion Testing</div>
-            <div class="slider-container">
-                <label for="varianceSlider" style="font-size: 12px;">Manufacturing Defect Variance: <span id="varValue">100%</span></label>
-                <input type="range" id="varianceSlider" min="0" max="100" value="100">
-                <div class="triz-text">HETEROGENEITY IS COMPUTATIONAL POWER</div>
+        <div id="panel-1" class="panel">
+            <div class="panel-title">PANEL 1: PIEZO-HYDROPHONE SWARM</div>
+            <div style="position: absolute; bottom: 20px; left: 20px; font-size: 12px; color: rgba(57,255,20,0.6);">
+                DEFECTIVE COTS SENSORS: <span id="node-count-ui">100</span><br>
+                ENVIRONMENT: DEEP OCEAN TRENCH<br>
+                STATE: CHAOTIC PULSE
             </div>
         </div>
 
-        <div class="control-group">
-            <div class="control-title">Threat Simulations</div>
-            <button class="btn btn-emp" id="btn-emp">TRIGGER EMP STRIKE</button>
-            <button class="btn btn-kinetic" id="btn-kinetic">ARTILLERY / KINETIC STRIKE</button>
-            <button class="btn btn-deploy" id="btn-deploy" style="margin-top: 15px;">REDEPLOY SWARM</button>
+        <div id="panel-2" class="panel">
+            <div class="panel-title" style="position: absolute; top: 0; left: 0;">PANEL 2: MEMRISTOR CROSSBAR ARRAY</div>
+            
+            <!-- Labels overlay for the p5 canvas elements -->
+            <div style="position: absolute; top: 20px; right: 20px; text-align: right; font-size: 12px;">
+                <span style="color: var(--amber);">[AMBER]</span> RERAM WEIGHTS<br>
+                <span style="color: var(--magenta);">[MAGENTA]</span> TARGET WAVEFORM<br>
+                <span style="color: var(--cyan);">[CYAN]</span> PASSIVE OUTPUT
+            </div>
+
+            <div class="power-readout">
+                ZERO ADC. PASSIVE KIRCHHOFF COMPUTATION.<br>
+                POWER DRAW: <span class="highlight">45 nW</span> (NanoWatts)
+            </div>
         </div>
 
-        <div class="control-title" style="margin-bottom: 5px;">Tactical Log</div>
-        <div id="terminal">
-            <!-- Logs injected via JS -->
+        <div id="panel-3" class="panel">
+            <div class="panel-title" style="position: absolute; top: -12px; left: -1px;">PANEL 3: HARDWARE REALITY CHECKS (RED TEAM)</div>
+            
+            <div class="controls-left">
+                <div class="slider-container">
+                    <label>HYDROPHONE MANUFACTURING VARIANCE [%]</label>
+                    <input type="range" id="variance-slider" min="0" max="100" value="100">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 2px;">
+                        <span>0% (UNIFORM/FAILS)</span>
+                        <span id="variance-val">100% (CHAOS/OPTIMAL)</span>
+                    </div>
+                </div>
+
+                <button class="btn" id="btn-destroy-adc">DESTROY CPU / ADCS</button>
+                <button class="btn btn-danger" id="btn-kinetic">KINETIC STRIKE (60% LOSS)</button>
+            </div>
+
+            <div class="controls-right">
+                <div id="terminal">
+                    <div class="log-entry log-sys">[SYS] INITIALIZING V2.0 PASSIVE ANALOG MATRIX...</div>
+                    <div class="log-entry log-sys">[SYS] ZERO-POWER COMPUTATION ESTABLISHED.</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- DOM Elements & Global State ---
+        // --- UI Interaction Logic ---
         const terminal = document.getElementById('terminal');
-        const varSlider = document.getElementById('varianceSlider');
-        const varValue = document.getElementById('varValue');
-
-        // State
-        let nodes = [];
-        const TOTAL_NODES = 200;
-        let varianceLevel = 1.0; // 0.0 to 1.0
+        const varianceSlider = document.getElementById('variance-slider');
+        const varianceVal = document.getElementById('variance-val');
         
-        let historyTarget = [];
-        let historyRecon = [];
-        let timeT = 0;
-        
-        let scannerX = 0;
-        let recalibrating = false;
-        let recalTimer = 0;
-        let smoothedAccuracy = 100;
-
-        // Visual FX
-        let empFlashAlpha = 0;
-        let kineticFlashAlpha = 0;
-
-        // Colors
-        let cBg, cGreen, cRed, cCyan, cMagenta;
-
-        // --- Utils ---
-        function formatTime() {
-            const d = new Date();
-            return `[${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}.${Math.floor(d.getMilliseconds()/100)}]`;
-        }
-
-        function addLog(msg, type = 'info') {
-            const el = document.createElement('div');
-            el.className = 'log-entry';
-            const html = `<span class="log-time">${formatTime()}</span><span class="log-${type}">${msg}</span>`;
-            el.innerHTML = html;
-            terminal.appendChild(el);
+        function logMsg(msg, level="info") {
+            const div = document.createElement('div');
+            div.className = `log-entry log-${level}`;
+            const time = new Date().toISOString().substring(11, 23);
+            div.textContent = `[${time}] ${msg}`;
+            terminal.appendChild(div);
             terminal.scrollTop = terminal.scrollHeight;
+            
+            // Limit log history
+            if (terminal.childElementCount > 30) {
+                terminal.removeChild(terminal.firstChild);
+            }
         }
 
-        // --- Node Class (Swarm Particles) ---
-        class Node {
-            constructor(w, h) {
-                this.boundsW = w;
-                this.boundsH = h;
-                this.reset();
+        varianceSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if(val == 100) {
+                varianceVal.textContent = "100% (CHAOS/OPTIMAL)";
+            } else if (val == 0) {
+                varianceVal.textContent = "0% (UNIFORM/FAILS)";
+            } else {
+                varianceVal.textContent = `${val}%`;
+            }
+            // Update p5 variable
+            if(window.p5System) window.p5System.setVariance(val / 100);
+        });
+
+        document.getElementById('btn-destroy-adc').addEventListener('click', () => {
+            logMsg("ATTEMPTING TO DISABLE DIGITAL COMPONENTS...", "warn");
+            setTimeout(() => {
+                logMsg("NO DIGITAL COMPONENTS FOUND. PURE ANALOG NETWORK OPERATIONAL.", "info");
+            }, 400);
+        });
+
+        document.getElementById('btn-kinetic').addEventListener('click', () => {
+            logMsg("INCOMING KINETIC STRIKE DETECTED!", "crit");
+            if(window.p5System) window.p5System.triggerKineticStrike();
+            
+            setTimeout(() => {
+                logMsg("60% NODES OFFLINE.", "crit");
+            }, 200);
+            
+            setTimeout(() => {
+                logMsg("KIRCHHOFF CURRENT REDISTRIBUTION ACTIVE. GRACEFUL DEGRADATION WITHOUT CLOUD COMPUTE.", "sys");
+            }, 800);
+        });
+
+
+        // --- P5.JS Simulation Backend ---
+        const sketch = (p) => {
+            
+            // Colors
+            const C_BG = p.color(3, 10, 5);
+            const C_GREEN = p.color(57, 255, 20);
+            const C_GREEN_DIM = p.color(20, 100, 10);
+            const C_RED = p.color(255, 0, 60);
+            const C_AMBER = p.color(255, 191, 0);
+            const C_CYAN = p.color(0, 255, 255);
+            const C_MAGENTA = p.color(255, 0, 255);
+            
+            // State
+            let nodes = [];
+            const NUM_NODES = 100;
+            let variance = 1.0; 
+            let networkHealth = 1.0; 
+            let targetHealth = 1.0;
+            
+            // Geometry mappings
+            let leftZone, rightZone;
+            let crossbar = {
+                cols: 16,
+                rows: 8,
+                startX: 0,
+                startY: 0,
+                spacing: 0,
+                weights: []
+            };
+
+            // Oscilloscope history
+            let historyTarget = [];
+            let historyOutput = [];
+            const MAX_HISTORY = 300;
+            let timeStep = 0;
+
+            // Sonar Ping
+            let sonar = {
+                active: true,
+                x: 0,
+                speed: 3
+            };
+
+            p.setup = () => {
+                let canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+                canvas.parent('canvas-container');
+                p.frameRate(60);
+                
+                initGeometry();
+                initNodes();
+                initCrossbar();
+
+                // Expose to HTML UI
+                window.p5System = {
+                    setVariance: (v) => { variance = v; },
+                    triggerKineticStrike: () => {
+                        let deadCount = 0;
+                        let targetDead = Math.floor(NUM_NODES * 0.6);
+                        
+                        // Shuffle nodes to kill random ones
+                        let shuffled = [...nodes].sort(() => 0.5 - Math.random());
+                        for(let i=0; i < shuffled.length; i++) {
+                            if (shuffled[i].isAlive && deadCount < targetDead) {
+                                shuffled[i].isAlive = false;
+                                deadCount++;
+                            }
+                        }
+                        networkHealth = 0.2; // Drop accuracy immediately
+                        document.getElementById('node-count-ui').textContent = (NUM_NODES - targetDead);
+                    }
+                };
+            };
+
+            p.windowResized = () => {
+                p.resizeCanvas(p.windowWidth, p.windowHeight);
+                initGeometry();
+                initCrossbar(); // Recalculate positions
+            };
+
+            function initGeometry() {
+                // Map regions to the CSS Grid layout
+                leftZone = {
+                    x: 20,
+                    y: 80,
+                    w: p.width * 0.4 - 40,
+                    h: p.height - 100
+                };
+                rightZone = {
+                    x: p.width * 0.4 + 20,
+                    y: 80,
+                    w: p.width * 0.6 - 40,
+                    h: p.height - 350 // Leave room for UI panel
+                };
             }
 
-            reset() {
-                this.x = random(20, this.boundsW - 20);
-                this.y = random(20, this.boundsH - 20);
-                this.baseFreq = random(0.5, 3.0); // Natural chaotic variance
-                this.basePhase = random(TWO_PI);
-                this.isAlive = true;
-                this.velX = 0;
-                this.velY = 0;
-                this.noiseOffset = random(1000);
+            function initNodes() {
+                nodes = [];
+                for(let i=0; i < NUM_NODES; i++) {
+                    nodes.push({
+                        x: p.random(leftZone.x, leftZone.x + leftZone.w - 50),
+                        y: p.random(leftZone.y + 20, leftZone.y + leftZone.h - 20),
+                        basePhase: p.random(p.TWO_PI),
+                        freq: p.random(0.02, 0.1),
+                        isAlive: true,
+                        pulse: 0,
+                        wireTargetCol: i % 16 // Connect to one of the 16 crossbar columns
+                    });
+                }
             }
 
-            kill() {
-                this.isAlive = false;
-                this.velX = random(-2, 2);
-                this.velY = random(1, 3);
-            }
+            function initCrossbar() {
+                crossbar.spacing = Math.min((rightZone.w - 100) / crossbar.cols, (rightZone.h * 0.5) / crossbar.rows);
+                crossbar.startX = rightZone.x + (rightZone.w - (crossbar.cols * crossbar.spacing)) / 2;
+                crossbar.startY = rightZone.y + 20;
 
-            update(variance) {
-                if (this.isAlive) {
-                    // Wandering movement
-                    this.x += map(noise(this.noiseOffset), 0, 1, -0.5, 0.5);
-                    this.y += map(noise(this.noiseOffset + 1000), 0, 1, -0.5, 0.5);
-                    this.noiseOffset += 0.01;
-
-                    // Keep in bounds
-                    this.x = constrain(this.x, 10, this.boundsW - 10);
-                    this.y = constrain(this.y, 10, this.boundsH - 10);
-                } else {
-                    // Falling dead node
-                    this.x += this.velX;
-                    this.y += this.velY;
-                    this.velY += 0.15; // Gravity
-                    // Bounce bottom of Panel 1
-                    if (this.y > this.boundsH - 5) {
-                        this.y = this.boundsH - 5;
-                        this.velY *= -0.4;
-                        this.velX *= 0.8;
+                // Init random fixed weights for the "memristors"
+                if (crossbar.weights.length === 0) {
+                    for(let i=0; i<crossbar.cols; i++) {
+                        crossbar.weights[i] = [];
+                        for(let j=0; j<crossbar.rows; j++) {
+                            crossbar.weights[i][j] = p.random(0.1, 1.0);
+                        }
                     }
                 }
             }
 
-            draw(variance, scannerX) {
-                let d = dist(this.x, 0, scannerX, 0);
-                let isScanned = d < 30;
+            p.draw = () => {
+                p.clear(); // Transparent background, CSS handles base color
+                
+                // Slowly recover network health (Graceful Degradation)
+                if (networkHealth < targetHealth) {
+                    networkHealth += 0.005; 
+                }
 
-                push();
-                translate(this.x, this.y);
+                updateSonar();
+                drawOceanBackground();
+                drawWires(); // Draw wires before nodes and crossbar
+                drawSwarm();
+                drawCrossbarArray();
+                drawOscilloscope();
+                
+                timeStep += 0.05;
+            };
 
-                if (this.isAlive) {
-                    // Behavior depends on variance slider
-                    // Low variance: Nodes act identically (1.0 freq, 0 phase)
-                    // High variance: Nodes act chaotically (baseFreq, basePhase)
-                    let currentFreq = lerp(1.0, this.baseFreq, variance);
-                    let currentPhase = lerp(0, this.basePhase, variance);
+            function updateSonar() {
+                sonar.x += sonar.speed;
+                if (sonar.x > leftZone.x + leftZone.w) {
+                    sonar.x = leftZone.x - 100; // Reset
+                }
+            }
+
+            function drawOceanBackground() {
+                // Optional subtle particle effects or gradient inside leftZone
+                p.noStroke();
+                p.fill(0, 10, 5, 100);
+                p.rect(leftZone.x, leftZone.y, leftZone.w, leftZone.h);
+            }
+
+            function drawSwarm() {
+                p.strokeWeight(1);
+                
+                // Draw Sonar line
+                p.stroke(0, 150, 150, 100);
+                p.line(sonar.x, leftZone.y, sonar.x, leftZone.y + leftZone.h);
+                
+                for(let n of nodes) {
+                    let d = p.abs(n.x - sonar.x);
                     
-                    let pulse = (sin(frameCount * 0.1 * currentFreq + currentPhase) + 1) / 2;
-                    let size = 3 + pulse * 3;
-                    let alpha = 100 + pulse * 155;
-
-                    if (isScanned) {
-                        size *= 2.0;
-                        alpha = 255;
-                        fill(150, 255, 150, alpha); // Brighter white-green flash
+                    // Excitation from Sonar
+                    if (d < 50 && n.isAlive) {
+                        n.pulse = p.lerp(n.pulse, 1.0, 0.2);
                     } else {
-                        fill(57, 255, 20, alpha); // Toxic Green
+                        n.pulse = p.lerp(n.pulse, 0.0, 0.05);
                     }
 
-                    noStroke();
-                    circle(0, 0, size);
+                    // Chaos logic dependent on variance slider
+                    // If variance is 0, they sync up (bad for stochastic resonance).
+                    // If variance is 1, they have chaotic independent phases (good).
+                    let currentPhase = p.lerp(timeStep, timeStep + n.basePhase, variance);
+                    let flicker = (p.sin(currentPhase * n.freq * 10) * 0.5 + 0.5) * n.pulse;
                     
-                    // Glow effect
-                    fill(57, 255, 20, alpha * 0.3);
-                    circle(0, 0, size * 2.5);
+                    if (!n.isAlive) {
+                        p.stroke(C_RED);
+                        p.fill(100, 0, 0, 150);
+                    } else {
+                        // Color shifts based on variance and pulse
+                        let c = p.lerpColor(C_GREEN_DIM, C_GREEN, flicker + 0.2);
+                        p.stroke(c);
+                        p.fill(p.red(c), p.green(c), p.blue(c), 100);
+                    }
 
-                } else {
-                    // Dead node
-                    fill(220, 20, 60, 150); // Crimson
-                    noStroke();
-                    circle(0, 0, 3);
+                    p.circle(n.x, n.y, n.isAlive ? 4 + flicker * 6 : 3);
+                    
+                    // Node subtle movement
+                    if (n.isAlive) {
+                        n.y += p.sin(timeStep + n.basePhase) * 0.2;
+                    }
                 }
-                pop();
-            }
-        }
-
-        // --- p5.js Sketch ---
-        function setup() {
-            let container = document.getElementById('p5-container');
-            let canvas = createCanvas(container.clientWidth, container.clientHeight);
-            canvas.parent('p5-container');
-            
-            cBg = color(5, 5, 8);
-            cGreen = color(57, 255, 20);
-            cRed = color(220, 20, 60);
-            cCyan = color(0, 255, 255);
-            cMagenta = color(255, 0, 255);
-
-            // Init Nodes
-            for(let i=0; i<TOTAL_NODES; i++) {
-                nodes.push(new Node(width, height / 2));
             }
 
-            // Init history arrays
-            for(let i=0; i<width; i++) {
-                historyTarget.push(0);
-                historyRecon.push(0);
-            }
-
-            addLog("SWARM RESERVOIR INITIALIZED.", "info");
-            addLog("LISTENING FOR SUBMARINE ACOUSTIC SIGNATURES...", "info");
-
-            // UI Listeners
-            varSlider.addEventListener('input', (e) => {
-                varianceLevel = e.target.value / 100;
-                varValue.innerText = e.target.value + '%';
-            });
-
-            document.getElementById('btn-emp').addEventListener('click', () => {
-                empFlashAlpha = 255;
-                addLog("EMP DETECTED.", "warn");
-                addLog("NO CMOS FPAA FOUND. WEIGHTS IN SECURE CLOUD. ZERO EFFECT.", "cyan");
-            });
-
-            document.getElementById('btn-kinetic').addEventListener('click', () => {
-                let living = nodes.filter(n => n.isAlive);
-                let killCount = Math.floor(living.length * 0.6); // Kill 60%
+            function drawWires() {
+                p.noFill();
+                // Draw bezier curves connecting left swarm area to right crossbar columns
+                // Group nodes by their target column to find an average starting point
+                let colStarts = new Array(crossbar.cols).fill({x:0, y:0, count:0});
                 
-                // Shuffle array
-                for (let i = living.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [living[i], living[j]] = [living[j], living[i]];
+                for(let n of nodes) {
+                    if (n.isAlive) {
+                        let c = n.wireTargetCol;
+                        colStarts[c] = {
+                            x: colStarts[c].x + n.x,
+                            y: colStarts[c].y + n.y,
+                            count: colStarts[c].count + 1
+                        };
+                    }
                 }
 
-                for(let i=0; i<killCount; i++) {
-                    living[i].kill();
-                }
+                p.strokeWeight(1);
+                for(let i=0; i<crossbar.cols; i++) {
+                    if (colStarts[i].count > 0) {
+                        let avgX = colStarts[i].x / colStarts[i].count;
+                        let avgY = colStarts[i].y / colStarts[i].count;
+                        
+                        let targetX = crossbar.startX + i * crossbar.spacing;
+                        let targetY = crossbar.startY;
 
-                kineticFlashAlpha = 200;
-                recalibrating = true;
-                recalTimer = 90; // 1.5 seconds at 60fps
+                        // Wire glow depends on network health
+                        p.stroke(57, 255, 20, 20 * networkHealth);
+                        
+                        p.beginShape();
+                        p.vertex(avgX, avgY);
+                        p.bezierVertex(
+                            avgX + 150, avgY, 
+                            targetX, targetY - 100, 
+                            targetX, targetY
+                        );
+                        p.endShape();
+                    }
+                }
+            }
+
+            function drawCrossbarArray() {
+                let w = crossbar.cols * crossbar.spacing;
+                let h = crossbar.rows * crossbar.spacing;
                 
-                addLog(`KINETIC IMPACT! ${killCount} NODES DESTROYED.`, "crit");
-                addLog("RECALCULATING RIDGE REGRESSION WEIGHTS...", "warn");
-            });
+                // Draw Grid Lines
+                p.strokeWeight(2);
+                for(let i=0; i<crossbar.cols; i++) {
+                    let x = crossbar.startX + i * crossbar.spacing;
+                    // Vertical (Input)
+                    p.stroke(20, 100, 50, 150);
+                    p.line(x, crossbar.startY, x, crossbar.startY + h - crossbar.spacing);
+                }
 
-            document.getElementById('btn-deploy').addEventListener('click', () => {
-                nodes.forEach(n => n.reset());
-                recalibrating = false;
-                addLog("SWARM REDEPLOYED. FULL COVERAGE RESTORED.", "info");
-            });
-        }
+                for(let j=0; j<crossbar.rows; j++) {
+                    let y = crossbar.startY + j * crossbar.spacing;
+                    // Horizontal (Output)
+                    p.stroke(20, 50, 100, 150);
+                    p.line(crossbar.startX, y, crossbar.startX + w + 20, y);
+                }
 
-        function windowResized() {
-            let container = document.getElementById('p5-container');
-            resizeCanvas(container.clientWidth, container.clientHeight);
-            // Re-adjust node bounds
-            nodes.forEach(n => {
-                n.boundsW = width;
-                n.boundsH = height / 2;
-                if (n.y > height/2) n.y = height/2 - 10;
-            });
-            // Re-adjust history arrays
-            while(historyTarget.length < width) {
-                historyTarget.unshift(0);
-                historyRecon.unshift(0);
+                // Draw Memristors at Intersections
+                p.noStroke();
+                for(let i=0; i<crossbar.cols; i++) {
+                    for(let j=0; j<crossbar.rows; j++) {
+                        let x = crossbar.startX + i * crossbar.spacing;
+                        let y = crossbar.startY + j * crossbar.spacing;
+                        
+                        // Fluctuate weights slightly for analog feel
+                        let dynamicWeight = crossbar.weights[i][j] * (0.8 + 0.2 * p.sin(timeStep + i*j));
+                        
+                        // Amber glow
+                        let alpha = 50 + 200 * dynamicWeight * networkHealth;
+                        p.fill(255, 191, 0, alpha);
+                        
+                        // Size pulses slightly
+                        let r = 4 + 2 * dynamicWeight;
+                        p.circle(x, y, r);
+                        
+                        // Inner hot core
+                        p.fill(255, 255, 200, alpha);
+                        p.circle(x, y, r/2);
+                    }
+                }
             }
-            if(historyTarget.length > width) {
-                historyTarget = historyTarget.slice(historyTarget.length - width);
-                historyRecon = historyRecon.slice(historyRecon.length - width);
-            }
-        }
 
-        function draw() {
-            background(cBg);
+            function drawOscilloscope() {
+                let scopeX = rightZone.x;
+                let scopeY = crossbar.startY + (crossbar.rows * crossbar.spacing) + 40;
+                let scopeW = rightZone.w;
+                let scopeH = rightZone.h - (scopeY - rightZone.y);
 
-            let halfH = height / 2;
+                // Scope background grid
+                p.stroke(0, 50, 0, 100);
+                p.strokeWeight(1);
+                for(let i=0; i<10; i++) {
+                    p.line(scopeX, scopeY + (i/10)*scopeH, scopeX + scopeW, scopeY + (i/10)*scopeH);
+                    p.line(scopeX + (i/10)*scopeW, scopeY, scopeX + (i/10)*scopeW, scopeY + scopeH);
+                }
 
-            // ==========================================
-            // PANEL 1: PHYSICAL SWARM
-            // ==========================================
-            push();
-            // Draw grid lines
-            stroke(cGreen.levels[0], cGreen.levels[1], cGreen.levels[2], 30);
-            strokeWeight(1);
-            for(let x = 0; x < width; x += 50) line(x, 0, x, halfH);
-            for(let y = 0; y < halfH; y += 50) line(0, y, width, y);
-
-            // Update & Draw Nodes
-            nodes.forEach(n => {
-                n.update(varianceLevel);
-                n.draw(varianceLevel, scannerX);
-            });
-
-            // Scanner Line
-            scannerX += 4;
-            if (scannerX > width) scannerX = 0;
-            
-            stroke(cCyan.levels[0], cCyan.levels[1], cCyan.levels[2], 150);
-            strokeWeight(2);
-            line(scannerX, 0, scannerX, halfH);
-            
-            // Scanner glow gradient
-            noStroke();
-            for(let i=0; i<20; i++) {
-                fill(cCyan.levels[0], cCyan.levels[1], cCyan.levels[2], map(i, 0, 20, 50, 0));
-                rect(scannerX - i, 0, 1, halfH);
-            }
-            pop();
-
-            // Split line
-            stroke(cGreen.levels[0], cGreen.levels[1], cGreen.levels[2], 100);
-            strokeWeight(2);
-            line(0, halfH, width, halfH);
-
-            // ==========================================
-            // PANEL 2: SIGNAL RECONSTRUCTION
-            // ==========================================
-            push();
-            translate(0, halfH);
-
-            // Grid lines for oscilloscope
-            stroke(100, 100, 100, 40);
-            strokeWeight(1);
-            let scopeCenterY = halfH / 2;
-            line(0, scopeCenterY, width, scopeCenterY);
-            for(let x = width; x > 0; x -= 100) line(x, 0, x, halfH);
-
-            // Calculate signals
-            timeT += 0.05;
-            
-            // Target Signal (Complex Submarine Signature)
-            // f(t) = sin(t) + 0.5*sin(2.3t + 1) + 0.25*cos(4.5t)
-            let valTarget = sin(timeT) + 0.5 * sin(2.3 * timeT + 1) + 0.25 * cos(4.5 * timeT);
-            
-            // Reconstructed Signal logic based on Swarm computing theory
-            let activeNodes = nodes.filter(n => n.isAlive).length;
-            let valRecon = 0;
-            let currentInstError = 0;
-
-            if (recalibrating) {
-                // Pure noise during recalibration
-                valRecon = random(-1.5, 1.5);
-                recalTimer--;
-                currentInstError = 100; // Force error high
+                // Mathematics for Target vs Output Signal
+                // Target is a complex waveform
+                let targetVal = p.sin(timeStep*2) * 0.5 + p.cos(timeStep*0.5) * 0.3;
                 
-                if (recalTimer <= 0) {
-                    recalibrating = false;
-                    addLog("RECALIBRATION COMPLETE. RIDGE REGRESSION OPTIMIZED.", "cyan");
-                    addLog(`Nodes Active: ${activeNodes}/${TOTAL_NODES}. GRACEFUL DEGRADATION COMPENSATING.`, "cyan");
+                // Output relies on chaos (variance) and health.
+                // High variance = stochastically computes properly. Low variance = fails.
+                let signalQuality = p.map(variance, 0, 1, 0.1, 1.0) * networkHealth;
+                
+                // Add some noise that increases when quality is low
+                let analogNoise = p.random(-0.1, 0.1) * (1.0 - signalQuality);
+                
+                // When variance is 0, signal flats out or becomes pure noise
+                let outputVal = targetVal * signalQuality + analogNoise;
+
+                historyTarget.push(targetVal);
+                historyOutput.push(outputVal);
+
+                if (historyTarget.length > MAX_HISTORY) {
+                    historyTarget.shift();
+                    historyOutput.shift();
                 }
-            } else {
-                if (activeNodes === 0) {
-                    valRecon = 0; // Dead
-                    currentInstError = 100;
-                } else {
-                    // Base simple sine (what a homogeneous sensor array would catch)
-                    let valSimple = sin(timeT);
-                    
-                    // The reservoir's ability to map complex functions depends on heterogeneity (variance)
-                    // and active node count (graceful degradation)
-                    let structuralIntegrity = activeNodes / TOTAL_NODES; // 0.0 to 1.0
-                    
-                    // Even at 100% variance, if nodes die, slightly imperfect mapping
-                    let effectiveMapping = varianceLevel * (0.7 + 0.3 * structuralIntegrity);
-                    
-                    // Add physical noise from dead nodes
-                    let degradationNoise = (1.0 - structuralIntegrity) * 0.3 * random(-1, 1);
-                    
-                    valRecon = lerp(valSimple, valTarget, effectiveMapping) + degradationNoise;
-                    
-                    // Instantaneous error
-                    currentInstError = abs(valTarget - valRecon) * 50; 
+
+                // Plot Target Wave (Magenta)
+                p.noFill();
+                p.stroke(C_MAGENTA);
+                p.strokeWeight(2);
+                p.beginShape();
+                for(let i=0; i<historyTarget.length; i++) {
+                    let x = scopeX + p.map(i, 0, MAX_HISTORY, 0, scopeW);
+                    let y = scopeY + scopeH/2 - historyTarget[i] * (scopeH/2.5);
+                    p.vertex(x, y);
+                }
+                p.endShape();
+
+                // Plot Output Wave (Cyan)
+                p.stroke(C_CYAN);
+                p.strokeWeight(2);
+                p.beginShape();
+                for(let i=0; i<historyOutput.length; i++) {
+                    let x = scopeX + p.map(i, 0, MAX_HISTORY, 0, scopeW);
+                    let y = scopeY + scopeH/2 - historyOutput[i] * (scopeH/2.5);
+                    p.vertex(x, y);
+                }
+                p.endShape();
+                
+                // Draw current tracking point
+                if (historyOutput.length > 0) {
+                    let lastX = scopeX + scopeW;
+                    let lastY = scopeY + scopeH/2 - historyOutput[historyOutput.length-1] * (scopeH/2.5);
+                    p.fill(C_CYAN);
+                    p.noStroke();
+                    p.circle(lastX, lastY, 6);
                 }
             }
+        };
 
-            // Push to history
-            historyTarget.push(valTarget);
-            historyRecon.push(valRecon);
-            
-            // Keep array size constant
-            if (historyTarget.length > width) {
-                historyTarget.shift();
-                historyRecon.shift();
-            }
-
-            // Draw Target Signal (Deep Magenta)
-            noFill();
-            stroke(cMagenta);
-            strokeWeight(3);
-            beginShape();
-            for(let i=0; i<historyTarget.length; i++) {
-                let y = scopeCenterY - historyTarget[i] * (halfH * 0.25);
-                vertex(i, y);
-            }
-            endShape();
-
-            // Draw Recon Signal (Electric Cyan)
-            stroke(cCyan);
-            strokeWeight(2);
-            beginShape();
-            for(let i=0; i<historyRecon.length; i++) {
-                let y = scopeCenterY - historyRecon[i] * (halfH * 0.25);
-                vertex(i, y);
-            }
-            endShape();
-            
-            // Glow effect for Recon
-            stroke(cCyan.levels[0], cCyan.levels[1], cCyan.levels[2], 50);
-            strokeWeight(6);
-            beginShape();
-            for(let i=0; i<historyRecon.length; i++) {
-                let y = scopeCenterY - historyRecon[i] * (halfH * 0.25);
-                vertex(i, y);
-            }
-            endShape();
-
-            // Update and Draw Accuracy Metric
-            smoothedAccuracy = lerp(smoothedAccuracy, max(0, 100 - currentInstError), 0.1);
-            
-            noStroke();
-            fill(cBg.levels[0], cBg.levels[1], cBg.levels[2], 200);
-            rect(width - 220, 10, 200, 60, 5);
-            stroke(cCyan);
-            strokeWeight(1);
-            noFill();
-            rect(width - 220, 10, 200, 60, 5);
-
-            fill(cCyan);
-            noStroke();
-            textSize(12);
-            textAlign(LEFT, TOP);
-            text("TARGET LOCK ACCURACY", width - 210, 20);
-            
-            textSize(24);
-            let accText = smoothedAccuracy.toFixed(1) + "%";
-            if(recalibrating) {
-                fill(cRed);
-                accText = "ERR: RECALIB";
-            } else if (smoothedAccuracy > 90) {
-                fill(cGreen);
-            } else if (smoothedAccuracy > 60) {
-                fill(255, 200, 0);
-            } else {
-                fill(cRed);
-            }
-            text(accText, width - 210, 40);
-
-            // Legend
-            textSize(10);
-            fill(cMagenta);
-            text("■ TARGET GROUND TRUTH", 20, halfH - 40);
-            fill(cCyan);
-            text("■ SWARM RECONSTRUCTED OUTPUT", 20, halfH - 25);
-
-            pop();
-
-            // ==========================================
-            // FULL SCREEN OVERLAYS (Flashing FX)
-            // ==========================================
-            if (empFlashAlpha > 0) {
-                fill(255, 255, 255, empFlashAlpha);
-                noStroke();
-                rect(0, 0, width, height);
-                empFlashAlpha -= 10;
-            }
-
-            if (kineticFlashAlpha > 0) {
-                fill(220, 20, 60, kineticFlashAlpha);
-                noStroke();
-                rect(0, 0, width, height);
-                kineticFlashAlpha -= 8;
-            }
-            
-            // Active Nodes counter top right of Panel 1
-            fill(cBg.levels[0], cBg.levels[1], cBg.levels[2], 200);
-            rect(width - 160, 10, 140, 30, 5);
-            fill(cGreen);
-            noStroke();
-            textSize(12);
-            textAlign(RIGHT, TOP);
-            text(`NODES: ${activeNodes}/${TOTAL_NODES}`, width - 30, 20);
-        }
+        // Initialize p5
+        new p5(sketch);
 
     </script>
 </body>
