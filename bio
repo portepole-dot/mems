@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-Materio Piezo-Ionic Neurocomputer</title>
+    <!-- p5.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+    <style>
+        :root {
+            --bg-color: #020611;
+            --aqua: #00ffff;
+            --aqua-dim: rgba(0, 255, 255, 0.2);
+            --gold: #ffbf00;
+            --toxic-green: #39ff14;
+            --magenta: #ff00ff;
+            --red-alert: #ff0033;
+            --panel-bg: rgba(2, 10, 25, 0.8);
+            --border-color: rgba(0, 255, 255, 0.3);
+            --font-main: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--aqua);
+            font-family: var(--font-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scanlines Overlay */
+        #scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0),
+                rgba(255, 255, 255, 0) 50%,
+                rgba(0, 0, 0, 0.2) 50%,
+                rgba(0, 0, 0, 0.2)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0.6;
+        }
+
+        /* Header */
+        header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(2,6,17,1) 0%, rgba(0,30,50,0.8) 100%);
+            z-index: 10;
+            box-shadow: 0 0 15px var(--aqua-dim);
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--aqua);
+            margin: 0;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: var(--toxic-green);
+            text-shadow: 0 0 5px var(--toxic-green);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--toxic-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--toxic-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Main Layout */
+        #main-layout {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 50px);
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Left/Center: Simulation Panels (1 & 2) */
+        #viz-container {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            position: relative;
+            padding: 20px;
+            background: radial-gradient(circle at center, rgba(0,40,60,0.2) 0%, transparent 70%);
+        }
+
+        #canvas-wrapper {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.1);
+            position: relative;
+            background-color: rgba(0, 5, 15, 0.5);
+        }
+
+        /* Overlay Texts on Canvas */
+        .overlay-text {
+            position: absolute;
+            pointer-events: none;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            text-shadow: 0 0 5px currentColor;
+        }
+
+        #label-chamber { top: 10px; left: 10px; color: var(--aqua); }
+        #label-memory { bottom: 35%; left: 10px; color: var(--gold); }
+        #label-osc { bottom: 10px; left: 10px; color: var(--magenta); }
+        
+        .hero-text {
+            position: absolute;
+            bottom: 40%;
+            width: 100%;
+            text-align: center;
+            color: var(--gold);
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px var(--gold);
+            pointer-events: none;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Right: Control Panel (Panel 3) */
+        #control-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            padding: 20px;
+            min-width: 300px;
+        }
+
+        .panel-header {
+            font-size: 1rem;
+            color: var(--toxic-green);
+            border-bottom: 1px solid var(--toxic-green);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px var(--toxic-green);
+        }
+
+        /* Buttons */
+        .btn {
+            background: transparent;
+            color: var(--aqua);
+            border: 1px solid var(--aqua);
+            padding: 15px;
+            margin-bottom: 15px;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: var(--aqua-dim);
+            box-shadow: 0 0 15px var(--aqua);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-shock { border-color: var(--gold); color: var(--gold); }
+        .btn-shock:hover { background: rgba(255, 191, 0, 0.2); box-shadow: 0 0 15px var(--gold); }
+
+        .btn-breach { border-color: var(--red-alert); color: var(--red-alert); }
+        .btn-breach:hover { background: rgba(255, 0, 51, 0.2); box-shadow: 0 0 15px var(--red-alert); }
+
+        .btn-flush { border-color: var(--toxic-green); color: var(--toxic-green); }
+        .btn-flush:hover { background: rgba(57, 255, 20, 0.2); box-shadow: 0 0 15px var(--toxic-green); }
+
+        /* Terminal Log */
+        #log-container {
+            flex: 1;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.8rem;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .log-entry {
+            word-wrap: break-word;
+            opacity: 0.9;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .log-time { color: #888; margin-right: 8px; }
+        .log-info { color: var(--aqua); }
+        .log-warn { color: var(--gold); }
+        .log-alert { color: var(--red-alert); font-weight: bold; text-shadow: 0 0 5px var(--red-alert); }
+        .log-success { color: var(--toxic-green); text-shadow: 0 0 5px var(--toxic-green); }
+
+        /* Alarm State */
+        body.alarm-state {
+            animation: alarmFlash 2s infinite;
+        }
+
+        @keyframes alarmFlash {
+            0%, 100% { box-shadow: inset 0 0 0px var(--red-alert); }
+            50% { box-shadow: inset 0 0 40px var(--red-alert); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar for Terminal */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
+        ::-webkit-scrollbar-thumb { background: var(--aqua); }
+        
+    </style>
+</head>
+<body>
+
+    <div id="scanlines"></div>
+
+    <header>
+        <h1>IN-MATERIO PIEZO-IONIC NEUROCOMPUTER // HUD V9.2</h1>
+        <div class="status-indicator">
+            <div class="status-dot" id="system-dot"></div>
+            <span id="system-status">SYSTEM NOMINAL</span>
+        </div>
+    </header>
+
+    <div id="main-layout">
+        <!-- Visualization Panels (1 & 2 rendered via p5.js here) -->
+        <section id="viz-container">
+            <div id="canvas-wrapper">
+                <div class="overlay-text" id="label-chamber">[PANEL 1] LIQUID CHAMBER : ACOUSTIC WAVE INPUT & PIEZO-CILIA ARRAY</div>
+                <div class="hero-text">COMPUTATION AND MEMORY FUSED AT ATOMIC LEVEL</div>
+                <div class="overlay-text" id="label-memory">[PANEL 2] IN-MATERIO READOUT : IONIC CONDUCTANCE SUBSTRATE</div>
+                <div class="overlay-text" id="label-osc">TARGET ACQUISITION : RAW (CYAN) VS TARGET (MAGENTA)</div>
+            </div>
+        </section>
+
+        <!-- Control Panel (Panel 3) -->
+        <aside id="control-panel">
+            <div class="panel-header">[PANEL 3] EXTREME KINETIC TESTING (RED TEAM)</div>
+            
+            <button class="btn btn-shock" id="btn-shock">
+                ► TRIGGER 10,000G KINETIC SHOCK
+            </button>
+            <button class="btn btn-breach" id="btn-breach">
+                ► BREACH VACUUM SEAL
+            </button>
+            <button class="btn btn-flush" id="btn-flush">
+                ► FLUSH POLYMER (RESET MEMORY)
+            </button>
+
+            <div class="panel-header" style="margin-top: 20px;">TACTICAL READOUT LOG</div>
+            <div id="log-container">
+                <!-- Logs generated by JS -->
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // --- DOM Elements & Logging System ---
+        const logContainer = document.getElementById('log-container');
+        const btnShock = document.getElementById('btn-shock');
+        const btnBreach = document.getElementById('btn-breach');
+        const btnFlush = document.getElementById('btn-flush');
+        const systemStatus = document.getElementById('system-status');
+        const systemDot = document.getElementById('system-dot');
+
+        function addLog(msg, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
+            
+            entry.innerHTML = `<span class="log-time">[${timeStr}]</span> ${msg}`;
+            logContainer.appendChild(entry);
+            
+            // Auto-scroll
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Limit log entries
+            if(logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+
+        // Initialize log
+        addLog("BOOT SEQUENCE INITIATED...", "info");
+        addLog("LIQUID POLYMER MATERIO-CHAMBER: ONLINE.", "success");
+        addLog("AWAITING ACOUSTIC INPUT.", "info");
+
+        // --- Interaction State ---
+        let simState = {
+            shockFrames: 0,
+            isShocking: false,
+            memoryMap: [],
+            totalMemory: 0,
+            learningProgress: 0, // 0 to 1
+            flushRequested: false
+        };
+
+        // --- Button Listeners ---
+        btnShock.addEventListener('click', () => {
+            addLog("WARNING: INITIATING 10,000G KINETIC SHOCK!", "warn");
+            simState.shockFrames = 90; // 1.5 seconds at 60fps
+            simState.isShocking = true;
+        });
+
+        btnBreach.addEventListener('click', () => {
+            addLog("CRITICAL: VACUUM SEAL BREACH DETECTED.", "alert");
+            document.body.classList.add('alarm-state');
+            systemStatus.textContent = "ENVIRONMENT COMPROMISED";
+            systemStatus.style.color = "var(--red-alert)";
+            systemDot.style.backgroundColor = "var(--red-alert)";
+            systemDot.style.boxShadow = "0 0 8px var(--red-alert)";
+            
+            setTimeout(() => {
+                addLog("NO VACUUM REQUIRED IN LIQUID STATE. CONTINUUM UNINTERRUPTED. SYSTEM 100% OPERATIONAL.", "success");
+                document.body.classList.remove('alarm-state');
+                systemStatus.textContent = "SYSTEM NOMINAL";
+                systemStatus.style.color = "var(--toxic-green)";
+                systemDot.style.backgroundColor = "var(--toxic-green)";
+                systemDot.style.boxShadow = "0 0 8px var(--toxic-green)";
+            }, 2500);
+        });
+
+        btnFlush.addEventListener('click', () => {
+            addLog("FLUSHING POLYMER... CLEARING IONIC MEMORY.", "info");
+            simState.flushRequested = true;
+        });
+
+        // --- p5.js Simulation ---
+        const sketch = (p) => {
+            // Colors
+            let colBg, colAqua, colGold, colGreen, colMagenta, colCyan;
+            
+            // Dimensions & Layout
+            let w, h;
+            let chamberBottom, substrateBottom, oscTop;
+            
+            // Physics Objects
+            let cilia = [];
+            let particles = [];
+            const NUM_CILIA = 60;
+            const NUM_MEMORY_BINS = 100;
+            
+            // Oscilloscope history
+            let rawHistory = [];
+            let targetHistory = [];
+            const HISTORY_LEN = 200;
+
+            p.setup = () => {
+                const wrapper = document.getElementById('canvas-wrapper');
+                w = wrapper.clientWidth;
+                h = wrapper.clientHeight;
+                
+                let canvas = p.createCanvas(w, h);
+                canvas.parent('canvas-wrapper');
+                p.frameRate(60);
+
+                // Define Colors
+                colBg = p.color('#020611');
+                colAqua = p.color(0, 255, 255);
+                colGold = p.color(255, 191, 0);
+                colGreen = p.color(57, 255, 20);
+                colMagenta = p.color(255, 0, 255);
+                colCyan = p.color(0, 255, 255);
+
+                // Define Layout Y-coordinates
+                chamberBottom = h * 0.5;
+                substrateBottom = h * 0.6;
+                oscTop = h * 0.7;
+
+                // Initialize Cilia (Tonotopy: Tall on left, short on right)
+                let spacing = w / (NUM_CILIA + 1);
+                for (let i = 0; i < NUM_CILIA; i++) {
+                    let x = (i + 1) * spacing;
+                    // Graded lengths: Max 40% of chamber height, Min 10%
+                    let length = p.map(i, 0, NUM_CILIA, (chamberBottom * 0.8), (chamberBottom * 0.2));
+                    cilia.push({
+                        x: x,
+                        baseY: chamberBottom,
+                        len: length,
+                        angle: 0,
+                        targetAngle: 0,
+                        resonantFreq: p.map(i, 0, NUM_CILIA, 0.02, 0.1) // Different resonance
+                    });
+                }
+
+                // Initialize Memory Map
+                for (let i = 0; i < NUM_MEMORY_BINS; i++) {
+                    simState.memoryMap.push(0);
+                }
+                
+                // Initialize Oscilloscope Arrays
+                for(let i=0; i<HISTORY_LEN; i++) {
+                    rawHistory.push(0);
+                    targetHistory.push(0);
+                }
+            };
+
+            p.windowResized = () => {
+                const wrapper = document.getElementById('canvas-wrapper');
+                w = wrapper.clientWidth;
+                h = wrapper.clientHeight;
+                p.resizeCanvas(w, h);
+                chamberBottom = h * 0.5;
+                substrateBottom = h * 0.6;
+                oscTop = h * 0.7;
+                
+                // Re-distribute cilia
+                let spacing = w / (NUM_CILIA + 1);
+                for (let i = 0; i < NUM_CILIA; i++) {
+                    cilia[i].x = (i + 1) * spacing;
+                    cilia[i].baseY = chamberBottom;
+                    cilia[i].len = p.map(i, 0, NUM_CILIA, (chamberBottom * 0.8), (chamberBottom * 0.2));
+                }
+            };
+
+            p.draw = () => {
+                // Clear with slight trail
+                p.background(2, 6, 17, 200);
+
+                let t = p.frameCount;
+
+                // Handle Flush
+                if (simState.flushRequested) {
+                    simState.memoryMap.fill(0);
+                    particles = [];
+                    simState.totalMemory = 0;
+                    simState.learningProgress = 0;
+                    simState.flushRequested = false;
+                }
+
+                // Calculate Memory / Learning Progress
+                simState.totalMemory = simState.memoryMap.reduce((a, b) => a + b, 0);
+                let maxPossibleMemory = NUM_MEMORY_BINS * 100; // Arbitrary cap for full learning
+                simState.learningProgress = p.constrain(simState.totalMemory / maxPossibleMemory, 0, 1);
+
+                // Handle Shock Physics & Screen Shake
+                let shockOffsetX = 0;
+                let shockOffsetY = 0;
+                let waveChaos = 0;
+                
+                if (simState.shockFrames > 0) {
+                    let intensity = simState.shockFrames / 90.0; // 1 to 0
+                    shockOffsetX = p.random(-20, 20) * intensity;
+                    shockOffsetY = p.random(-20, 20) * intensity;
+                    waveChaos = intensity * 150; // Huge wave amplitude addition
+                    
+                    simState.shockFrames--;
+                    
+                    if (simState.shockFrames === 1) {
+                        simState.isShocking = false;
+                        addLog("LIQUID DAMPING ACTIVE. ZERO STICTION. ZERO MECHANICAL DAMAGE.", "success");
+                    }
+                }
+
+                p.push();
+                p.translate(shockOffsetX, shockOffsetY);
+
+                // ==========================================
+                // PANEL 1: LIQUID CHAMBER & CILIA
+                // ==========================================
+                
+                // Draw Liquid Background
+                p.noStroke();
+                p.fill(0, 40, 60, 100);
+                p.rect(0, 0, w, chamberBottom);
+
+                // Calculate and Draw Acoustic Wave
+                let baseWaveFreq = 0.05;
+                let baseWaveAmp = 30 + (p.sin(t * 0.01) * 10);
+                
+                p.stroke(colAqua);
+                p.strokeWeight(2);
+                p.noFill();
+                p.drawingContext.shadowBlur = 10;
+                p.drawingContext.shadowColor = colAqua;
+                
+                p.beginShape();
+                for (let x = 0; x <= w; x += 10) {
+                    // Wave = Base Sine + Perlin Noise for fluid detail + Shock Chaos
+                    let noiseVal = p.noise(x * 0.01, t * 0.02) * 20;
+                    let y = (chamberBottom * 0.3) + p.sin(x * baseWaveFreq - t * 0.1) * baseWaveAmp + noiseVal;
+                    
+                    if (waveChaos > 0) {
+                        y += p.random(-waveChaos, waveChaos) * p.noise(x * 0.05, t);
+                    }
+                    p.vertex(x, y);
+                }
+                p.endShape();
+                
+                // Reset glow
+                p.drawingContext.shadowBlur = 0;
+
+                // Draw and Update Cilia
+                p.stroke(colGreen);
+                p.drawingContext.shadowBlur = 15;
+                p.drawingContext.shadowColor = colGreen;
+                
+                for (let i = 0; i < cilia.length; i++) {
+                    let c = cilia[i];
+                    
+                    // Physical Interaction: Wave height directly above the cilium
+                    let waveY = (chamberBottom * 0.3) + p.sin(c.x * baseWaveFreq - t * 0.1) * baseWaveAmp;
+                    let force = p.map(waveY, 0, chamberBottom, 0.5, -0.5); // Abstract fluid force
+                    
+                    // Add resonance (sways more if wave matches its resonant freq)
+                    let resonance = p.sin(t * c.resonantFreq);
+                    
+                    // Normal state Target Angle
+                    c.targetAngle = (force + resonance * 0.3) * (c.len / 100); 
+
+                    // Extreme Kinetic Testing: Flatten completely
+                    if (simState.shockFrames > 0) {
+                        c.targetAngle = p.PI / 2.2; // Bend flat against floor
+                    }
+
+                    // Ease angle for smooth fluid physics
+                    c.angle += (c.targetAngle - c.angle) * 0.1;
+
+                    // Calculate tip position
+                    let tipX = c.x + p.sin(c.angle) * c.len;
+                    let tipY = c.baseY - p.cos(c.angle) * c.len;
+
+                    // Draw Cilium
+                    p.strokeWeight(3);
+                    p.line(c.x, c.baseY, tipX, tipY);
+
+                    // Ion Emission Logic
+                    // Emit particles if bending significantly and not in extreme shock (or maybe even during shock)
+                    let bendVel = p.abs(c.targetAngle - c.angle);
+                    if (bendVel > 0.02 && p.random() > 0.7 && !simState.isShocking) {
+                        particles.push({
+                            x: c.x + p.random(-2, 2),
+                            y: c.baseY,
+                            vy: p.random(1, 3),
+                            life: 255
+                        });
+                    }
+                }
+
+                // Draw Floor Line
+                p.stroke(100);
+                p.strokeWeight(1);
+                p.drawingContext.shadowBlur = 0;
+                p.line(0, chamberBottom, w, chamberBottom);
+
+                // ==========================================
+                // PANEL 2: IONIC CONDUCTANCE MEMORY SUBSTRATE
+                // ==========================================
+                
+                // Update and Draw Particles (Amber Ions)
+                p.noStroke();
+                p.drawingContext.shadowBlur = 10;
+                p.drawingContext.shadowColor = colGold;
+                
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    let pObj = particles[i];
+                    pObj.y += pObj.vy;
+                    pObj.life -= 2;
+
+                    p.fill(255, 191, 0, pObj.life);
+                    p.circle(pObj.x, pObj.y, 4);
+
+                    // Collision with substrate bottom
+                    if (pObj.y >= substrateBottom) {
+                        // Increase memory heat at specific bin
+                        let binIndex = p.floor(p.map(pObj.x, 0, w, 0, NUM_MEMORY_BINS));
+                        if (binIndex >= 0 && binIndex < NUM_MEMORY_BINS) {
+                            simState.memoryMap[binIndex] = p.min(simState.memoryMap[binIndex] + 5, 255);
+                        }
+                        particles.splice(i, 1);
+                    }
+                }
+
+                // Draw Heatmap (Conductance Substrate)
+                p.drawingContext.shadowBlur = 0; // Turn off glow for base render to keep performance
+                let binWidth = w / NUM_MEMORY_BINS;
+                for (let i = 0; i < NUM_MEMORY_BINS; i++) {
+                    let heat = simState.memoryMap[i];
+                    let x = i * binWidth;
+                    
+                    // Background grid for substrate
+                    p.fill(10, 20, 30);
+                    p.rect(x, chamberBottom, binWidth - 1, substrateBottom - chamberBottom);
+                    
+                    if (heat > 0) {
+                        // Interpolate color from dark blue to bright glowing gold based on heat
+                        let heatCol = p.lerpColor(p.color(0, 20, 50), colGold, heat / 255.0);
+                        p.fill(heatCol);
+                        
+                        // Height of the heat bar
+                        let heatH = p.map(heat, 0, 255, 0, substrateBottom - chamberBottom);
+                        
+                        // Add glow if hot
+                        if (heat > 100) {
+                            p.drawingContext.shadowBlur = p.map(heat, 100, 255, 0, 15);
+                            p.drawingContext.shadowColor = colGold;
+                        } else {
+                            p.drawingContext.shadowBlur = 0;
+                        }
+                        
+                        p.rect(x, substrateBottom - heatH, binWidth - 1, heatH);
+                    }
+                }
+                p.drawingContext.shadowBlur = 0;
+
+                // ==========================================
+                // OSCILLOSCOPE: TARGET MATCHING
+                // ==========================================
+                
+                // Generate current signals
+                // Target is a complex but stable wave
+                let targetSig = p.sin(t * 0.05) * 30 + p.cos(t * 0.02) * 15;
+                
+                // Raw signal starts chaotic, but aligns with Target as LearningProgress approaches 1.0
+                let noiseLevel = (1.0 - simState.learningProgress) * 60;
+                let rawSig = targetSig + (p.noise(t * 0.5) - 0.5) * noiseLevel;
+
+                // If shocking, scramble raw signal completely
+                if(simState.shockFrames > 0) {
+                    rawSig += p.random(-100, 100);
+                }
+
+                // Update history
+                targetHistory.push(targetSig);
+                rawHistory.push(rawSig);
+                if (targetHistory.length > HISTORY_LEN) {
+                    targetHistory.shift();
+                    rawHistory.shift();
+                }
+
+                let oscCenterY = oscTop + (h - oscTop) / 2;
+
+                // Draw grid for oscilloscope
+                p.stroke(0, 50, 50, 100);
+                p.strokeWeight(1);
+                for(let i=0; i<w; i+=40) { p.line(i, oscTop, i, h); }
+                for(let j=oscTop; j<h; j+=30) { p.line(0, j, w, j); }
+                p.stroke(0, 150, 150, 200);
+                p.line(0, oscCenterY, w, oscCenterY);
+
+                // Draw Target Signal (Magenta)
+                p.noFill();
+                p.stroke(colMagenta);
+                p.strokeWeight(2);
+                p.drawingContext.shadowBlur = 10;
+                p.drawingContext.shadowColor = colMagenta;
+                p.beginShape();
+                for (let i = 0; i < targetHistory.length; i++) {
+                    let x = p.map(i, 0, HISTORY_LEN, 0, w);
+                    p.vertex(x, oscCenterY + targetHistory[i]);
+                }
+                p.endShape();
+
+                // Draw Raw Signal (Cyan)
+                p.stroke(colCyan);
+                p.strokeWeight(2);
+                p.drawingContext.shadowBlur = 10;
+                p.drawingContext.shadowColor = colCyan;
+                p.beginShape();
+                for (let i = 0; i < rawHistory.length; i++) {
+                    let x = p.map(i, 0, HISTORY_LEN, 0, w);
+                    p.vertex(x, oscCenterY + rawHistory[i]);
+                }
+                p.endShape();
+
+                p.pop(); // End Transform (Shake)
+
+                // UI Overlay text updates (drawn within p5 to align perfectly with graph)
+                p.drawingContext.shadowBlur = 0;
+                p.fill(255);
+                p.noStroke();
+                p.textSize(12);
+                p.textFont('Courier New');
+                p.textAlign(p.RIGHT);
+                p.text(`NEURAL ADAPTATION: ${(simState.learningProgress * 100).toFixed(1)}%`, w - 20, oscTop + 20);
+                p.text(`NOISE FLOOR: ${noiseLevel.toFixed(1)} dB`, w - 20, oscTop + 40);
+            };
+        };
+
+        // Initialize p5
+        new p5(sketch);
+
+    </script>
+</body>
+</html>
